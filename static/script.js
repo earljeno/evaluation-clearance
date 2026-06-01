@@ -106,23 +106,7 @@ refreshBtn.addEventListener('click', () => {
         .then(() => {
             if (searchInput.value.trim()) performSearch(searchInput.value);
             refreshBtn.innerHTML = 'Refresh';
-
-            // unhide the timer dom and show seconds left by "(sec)"
-            const timeoutId = setTimeout(() => {
-                refreshBtn.disabled = false;
-
-                timer.innerText = '(10)';
-                let timeLeft = 10;
-                const countdown = setInterval(() => {
-                    timeLeft--;
-                    timer.innerText = `(${timeLeft})`;
-                    if (timeLeft <= 0) {
-                        clearInterval(countdown);
-                        timer.hidden = true;
-                    }
-                }, 1000);
-            }, 10000);
-
+            refreshBtn.disabled = false;
         })
         .catch(error => {
             alert('Manual refresh error.');
