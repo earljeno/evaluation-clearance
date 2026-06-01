@@ -80,7 +80,7 @@ searchBtn.addEventListener('click', () => {
 
 searchInput.addEventListener('input', () => {
     const query = searchInput.value;
-    
+
     // BROADCAST TO GUEST SCREEN: Live Typing
     localStorage.setItem('staff_typing_id', query);
 
@@ -105,10 +105,13 @@ refreshBtn.addEventListener('click', () => {
         .then(() => {
             if (searchInput.value.trim()) performSearch(searchInput.value);
             refreshBtn.innerHTML = 'Refresh';
-            refreshBtn.disabled = false;
+            const timeoutId = setTimeout(() => {
+                refreshBtn.disabled = false;
+            }, 10000);
+
         })
         .catch(error => {
-            alert('Manual refresh error. Check the server dude.');
+            alert('Manual refresh error.');
             resultBox.innerHTML = `
             <div class="result-name">Error</div>
             <div class="result-status">${error}</div>
