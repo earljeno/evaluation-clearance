@@ -4,48 +4,122 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Survey Clearance System</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='ndmu_logo.png') }}">
+    <title>Survey Clearance System | NDMU Computer Science Center</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='ndmu_logo.png') }}" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
-    <div class="survey-container d-flex align-items-center justify-content-center">
-        <div class="survey-card text-center">
-            <div class="survey-header mb-4">
-                <h1 class="survey-title">Survey Clearance System</h1>
-                <p class="survey-subtitle">Computer Science Center</p>
-            </div>
-
-            <div class="input-group mb-3">
-                <input type="text" id="searchInput" class="form-control form-control-lg"
-                    placeholder="Enter School ID or Name" />
-                <button id="searchBtn" class="btn btn-primary">
-                    <i class="fas fa-search me-1"></i>Search
-                </button>
-            </div>
-
-            <button id="refreshBtn" class="btn btn-outline-secondary btn-refresh mb-4">
-                <i class="fas fa-rotate-right me-1"></i>Refresh <span id="timer" hidden></span>
-            </button>
-
-            <div class="status-card mt-3">
-                <div id="searchingBox" style="display: none;">
-                    <div class="loading-spinner mb-2">
-                        <i class="fas fa-spinner fa-spin"></i>
+    <main class="station-shell">
+        <div class="station-card">
+            <header class="station-header">
+                <div class="institution-brand">
+                    <img src="{{ url_for('static', filename='ndmu_logo.png') }}" alt="NDMU Institutional Seal" class="brand-logo" width="56" height="56" />
+                    <div class="brand-text">
+                        <span class="institution-name">Notre Dame of Marbel University</span>
+                        <span class="department-name">Computer Science Center</span>
                     </div>
-                    <div class="text-muted">Searching...</div>
+                </div>
+                <div class="header-divider" aria-hidden="true"></div>
+                <div class="title-block">
+                    <h1 class="page-title">Evaluation Clearance Verification</h1>
+                    <p class="page-caption">Staff verification station for student survey completion status</p>
+                </div>
+            </header>
+
+            <section class="search-section" aria-label="Student lookup section">
+                <form id="searchForm" class="search-form" onsubmit="event.preventDefault();">
+                    <label for="searchInput" class="search-label">
+                        <span class="label-heading">Search Student</span>
+                        <span class="label-instruction">Type School ID number or full name</span>
+                    </label>
+
+                    <div class="search-bar-wrap">
+                        <div class="search-icon-slot" aria-hidden="true">
+                            <i class="fas fa-magnifying-glass"></i>
+                        </div>
+                        <input
+                            type="text"
+                            id="searchInput"
+                            class="search-input"
+                            placeholder="e.g. 202100456 or Dela Cruz, Juan"
+                            autocomplete="off"
+                            autocorrect="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            autofocus
+                        />
+                        <button type="button" id="clearInputBtn" class="clear-btn" aria-label="Clear search input" title="Clear search" hidden>
+                            <i class="fas fa-xmark" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" id="searchBtn" class="verify-btn" aria-label="Verify clearance">
+                            <i class="fas fa-id-card me-1" aria-hidden="true"></i>
+                            <span>Verify</span>
+                        </button>
+                    </div>
+
+                    <div class="search-hints">
+                        <span class="shortcut-tip"><kbd>Enter</kbd> to verify</span>
+                        <span class="shortcut-sep" aria-hidden="true">•</span>
+                        <span class="shortcut-tip"><kbd>Esc</kbd> to clear</span>
+                        <span class="shortcut-sep" aria-hidden="true">•</span>
+                        <span class="search-mode-indicator" id="searchModeBadge">Auto-search active</span>
+                    </div>
+                </form>
+            </section>
+
+            <section class="result-section" aria-label="Clearance status verification result">
+                <div id="statusStage" class="status-stage" aria-live="polite">
+                    <!-- Idle State -->
+                    <div id="idleBox" class="stage-state stage-idle">
+                        <div class="state-icon idle-icon" aria-hidden="true">
+                            <i class="fas fa-address-card"></i>
+                        </div>
+                        <h2 class="state-title">Ready for Student Lookup</h2>
+                        <p class="state-description">Enter a student School ID or full name above. Clearance status verifies automatically.</p>
+                    </div>
+
+                    <!-- Searching State -->
+                    <div id="searchingBox" class="stage-state stage-searching" style="display: none;">
+                        <div class="loading-spinner" aria-hidden="true">
+                            <i class="fas fa-circle-notch fa-spin"></i>
+                        </div>
+                        <h2 class="state-title">Verifying Records</h2>
+                        <p class="state-description">Checking evaluation database for matching student record...</p>
+                    </div>
+
+                    <!-- Result Box -->
+                    <div id="resultBox" class="result-area" style="display: none;">
+                        <!-- Injected dynamically by script.js -->
+                    </div>
+                </div>
+            </section>
+
+            <footer class="station-actions">
+                <div class="action-group-left">
+                    <button type="button" id="refreshBtn" class="action-btn sync-btn" title="Sync database with latest Google Sheet data">
+                        <i class="fas fa-rotate" aria-hidden="true"></i>
+                        <span id="refreshBtnText">Sync Sheet Data</span>
+                        <span id="timer" class="sync-cooldown" hidden></span>
+                    </button>
+                    <span id="syncNotice" class="sync-feedback" role="status" aria-live="polite"></span>
                 </div>
 
-                <div id="resultBox" class="result-area">
-                    <!-- Result will be dynamically inserted here -->
+                <div class="action-group-right">
+                    <a href="{{ url_for('viewer') }}" target="_blank" rel="noopener noreferrer" class="action-btn viewer-link-btn" title="Open student-facing display in a second monitor or window">
+                        <i class="fas fa-display me-1" aria-hidden="true"></i>
+                        <span>Open Guest Display</span>
+                    </a>
                 </div>
-            </div>
+            </footer>
         </div>
-    </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 
-<script src="{{ url_for('static', filename='script.js') }}"></script>
 </html>

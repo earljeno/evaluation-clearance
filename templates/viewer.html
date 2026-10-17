@@ -4,173 +4,165 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Guest View | Survey Clearance System</title>
+    <title>Guest Display | NDMU Survey Clearance System</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='ndmu_logo.png') }}" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <style>
-        /* USING YOUR EXACT CSS THEME */
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@100;200;300;400;500;600;700;800;900&display=swap');
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f9fafb;
-            color: #374151;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0;
-        }
-
-        .survey-card {
-            background: #ffffff;
-            border-radius: 16px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
-            padding: 40px 32px;
-            max-width: 600px;
-            /* Slightly wider for visitor clarity */
-            width: 100%;
-            text-align: center;
-        }
-
-        .survey-title {
-            font-size: 1.8rem;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .survey-subtitle {
-            color: #6b7280;
-            font-size: 1rem;
-            margin-bottom: 0;
-        }
-
-        /* Mock Input Style for the Live ID */
-        .visitor-input-display {
-            border: 2px solid #3b82f6;
-            /* Blue border to highlight active typing */
-            border-radius: 8px;
-            padding: 15px;
-            font-size: 2rem;
-            font-weight: 700;
-            background-color: #ffffff;
-            color: #111827;
-            min-height: 75px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-            font-family: 'Courier New', Courier, monospace;
-        }
-
-        .status-card {
-            background: #f9fafb;
-            border: 2px dashed #d1d5db;
-            border-radius: 12px;
-            padding: 30px 16px;
-            min-height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        .result-area .result-name {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .result-area .result-status {
-            font-family: 'Courier New', Courier, monospace;
-            font-weight: 700;
-            font-size: 1.5rem;
-            color: #2563eb;
-            margin-top: 0.5rem;
-        }
-
-        .label-text {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
 </head>
 
 <body>
+    <main class="visitor-shell">
+        <div class="visitor-card">
+            <header class="station-header">
+                <div class="institution-brand">
+                    <img src="{{ url_for('static', filename='ndmu_logo.png') }}" alt="NDMU Institutional Seal" class="brand-logo" width="56" height="56" />
+                    <div class="brand-text">
+                        <span class="institution-name">Notre Dame of Marbel University</span>
+                        <span class="department-name">Computer Science Center</span>
+                    </div>
+                </div>
+                <div class="header-divider" aria-hidden="true"></div>
+                <div class="title-block">
+                    <h1 class="page-title">Survey Clearance Monitor</h1>
+                    <p class="page-caption">Live student verification display</p>
+                </div>
+            </header>
 
-    <div class="survey-card">
-        <div class="survey-header mb-4">
-            <h1 class="survey-title">Survey Clearance System</h1>
-            <p class="survey-subtitle">Computer Science Center</p>
+            <section class="visitor-id-section" aria-label="Active student lookup display">
+                <div class="visitor-id-label">
+                    <span>Verifying Entry:</span>
+                    <span id="liveStatusHint" class="timestamp-text">Awaiting Entry</span>
+                </div>
+                <div id="viewLiveID" class="visitor-id-box placeholder-id" aria-live="polite">
+                    Waiting for staff input...
+                </div>
+            </section>
+
+            <section class="result-section" aria-label="Verification result display">
+                <div id="statusStage" class="visitor-stage" aria-live="polite">
+                    <!-- Idle State -->
+                    <div id="idleState" class="stage-state stage-idle">
+                        <div class="state-icon idle-icon" aria-hidden="true">
+                            <i class="fas fa-id-badge"></i>
+                        </div>
+                        <h2 class="state-title">Station Ready</h2>
+                        <p class="state-description">Please provide your School ID number or full name to the laboratory desk staff for evaluation clearance check.</p>
+                    </div>
+
+                    <!-- Result Box -->
+                    <div id="resultBox" class="result-area" style="display: none;">
+                        <div id="resultCard" class="visitor-result-card status-cleared">
+                            <span id="viewBadge" class="status-badge">
+                                <i id="viewBadgeIcon" class="fas fa-circle-check" aria-hidden="true"></i>
+                                <span id="viewBadgeText">Cleared</span>
+                            </span>
+                            <h2 class="visitor-student-name" id="viewName">Student Name</h2>
+                            <p class="visitor-status-msg" id="viewStatus">Cleared!</p>
+                            <p class="result-detail-text" id="viewNote">Evaluation survey completed and verified.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="visitor-footer-bar">
+                <span>NDMU CS Center Verification Terminal</span>
+                <span class="connection-indicator">
+                    <span class="indicator-dot" aria-hidden="true"></span>
+                    <span>Live Station Link Active</span>
+                </span>
+            </footer>
         </div>
-
-        <span class="label-text">Verifying ID:</span>
-        <div id="viewLiveID" class="visitor-input-display">-</div>
-
-        <div class="status-card">
-            <div id="idleState">
-                <div class="text-muted"><i class="fas fa-search me-2"></i>Waiting for entry...</div>
-            </div>
-
-            <div id="resultBox" class="result-area" style="display: none;">
-                <div class="result-name" id="viewName">---</div>
-                <div class="result-status" id="viewStatus">---</div>
-            </div>
-        </div>
-    </div>
+    </main>
 
     <script>
         const viewLiveID = document.getElementById('viewLiveID');
-        const resultBox = document.getElementById('resultBox');
+        const liveStatusHint = document.getElementById('liveStatusHint');
         const idleState = document.getElementById('idleState');
+        const resultBox = document.getElementById('resultBox');
+        const resultCard = document.getElementById('resultCard');
+        const viewBadge = document.getElementById('viewBadge');
+        const viewBadgeIcon = document.getElementById('viewBadgeIcon');
+        const viewBadgeText = document.getElementById('viewBadgeText');
         const viewName = document.getElementById('viewName');
         const viewStatus = document.getElementById('viewStatus');
+        const viewNote = document.getElementById('viewNote');
 
-        // Listen for storage events from your Staff Screen
+        let resultTimer = null;
+
+        function resetDisplay() {
+            if (resultBox) resultBox.style.display = 'none';
+            if (idleState) idleState.style.display = 'flex';
+            if (viewLiveID) {
+                viewLiveID.innerText = 'Waiting for staff input...';
+                viewLiveID.className = 'visitor-id-box placeholder-id';
+            }
+            if (liveStatusHint) liveStatusHint.innerText = 'Awaiting Entry';
+            if (resultTimer) {
+                clearTimeout(resultTimer);
+                resultTimer = null;
+            }
+        }
+
+        function showResult(data) {
+            if (idleState) idleState.style.display = 'none';
+            if (resultBox) resultBox.style.display = 'block';
+
+            if (viewName) viewName.innerText = data.name || '---';
+            if (viewStatus) viewStatus.innerText = data.status || 'Verified';
+
+            const isCleared = (data.status && data.status.toLowerCase().includes('cleared')) ||
+                              (data.name && data.name !== 'Not Found' && !data.name.toLowerCase().includes('not found'));
+
+            if (isCleared) {
+                if (resultCard) {
+                    resultCard.className = 'visitor-result-card status-cleared';
+                }
+                if (viewBadgeIcon) viewBadgeIcon.className = 'fas fa-circle-check';
+                if (viewBadgeText) viewBadgeText.innerText = 'Cleared for Evaluation';
+                if (viewNote) viewNote.innerText = 'Your survey evaluation has been successfully submitted and verified.';
+                if (liveStatusHint) liveStatusHint.innerText = 'Verification Verified';
+            } else {
+                if (resultCard) {
+                    resultCard.className = 'visitor-result-card status-notfound';
+                }
+                if (viewBadgeIcon) viewBadgeIcon.className = 'fas fa-circle-exclamation';
+                if (viewBadgeText) viewBadgeText.innerText = 'No Evaluation Record';
+                if (viewNote) viewNote.innerText = 'No completed survey was found under this entry. Please verify details with the staff.';
+                if (liveStatusHint) liveStatusHint.innerText = 'Record Not Found';
+            }
+
+            if (resultTimer) clearTimeout(resultTimer);
+            resultTimer = setTimeout(resetDisplay, 15000);
+        }
+
+        // Listen for storage events broadcast from Staff Screen (index.html)
         window.addEventListener('storage', (event) => {
-            // Update the ID as staff types
             if (event.key === 'staff_typing_id') {
                 const val = event.newValue;
-                viewLiveID.innerText = val && val.trim() !== "" ? val : "---";
-
-                // If staff clears input, clear the visitor's screen too
-                if (!val || val.trim() === "") {
+                if (val && val.trim() !== '') {
+                    viewLiveID.innerText = val.trim();
+                    viewLiveID.className = 'visitor-id-box active-typing';
+                    if (liveStatusHint) liveStatusHint.innerText = 'Staff Typing...';
+                } else {
                     resetDisplay();
                 }
             }
 
-            // Update result when search is performed
-            if (event.key === 'guest_display_data') {
-                const data = JSON.parse(event.newValue);
-                showResult(data);
+            if (event.key === 'guest_display_data' && event.newValue) {
+                try {
+                    const data = JSON.parse(event.newValue);
+                    showResult(data);
+                } catch (err) {
+                    console.error('Failed to parse display data:', err);
+                }
             }
         });
 
-        let resultTimer;
-
-        function showResult(data) {
-            idleState.style.display = 'none';
-            resultBox.style.display = 'block';
-            viewName.innerText = data.name;
-            viewStatus.innerText = data.status;
-
-            if (resultTimer) {
-                clearTimeout(resultTimer);
-            }
-
-            resultTimer = setTimeout(resetDisplay, 15000);
-        }
-
-        function resetDisplay() {
-            resultBox.style.display = 'none';
-            idleState.style.display = 'block';
-        }
+        // Initialize to clean idle state
+        resetDisplay();
     </script>
 </body>
 
