@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Settings | NDMU Survey Clearance System</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='ndmu_logo.png') }}" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<body>
+    <main class="station-shell">
+        <div class="station-card settings-station-card">
+            <header class="station-header">
+                <div class="institution-brand">
+                    <img src="{{ url_for('static', filename='ndmu_logo.png') }}" alt="NDMU Institutional Seal" class="brand-logo" width="56" height="56" />
+                    <div class="brand-text">
+                        <span class="institution-name">Notre Dame of Marbel University</span>
+                        <span class="department-name">Computer Science Center</span>
+                    </div>
+                </div>
+                <div class="header-divider" aria-hidden="true"></div>
+                <div class="title-block">
+                    <div class="header-top-row">
+                        <h1 class="page-title">Clearance Database Settings</h1>
+                        <a href="{{ url_for('index') }}" class="action-btn back-btn" title="Return to student verification station">
+                            <i class="fas fa-arrow-left me-1" aria-hidden="true"></i>
+                            <span>Verification Station</span>
+                        </a>
+                    </div>
+                    <p class="page-caption">Update clearance evaluation student records from a spreadsheet or sync link</p>
+                </div>
+            </header>
+
+            <nav class="settings-tabs" role="tablist" aria-label="Settings categories">
+                <button type="button" id="tabPasteBtn" class="tab-btn active" role="tab" aria-selected="true" aria-controls="panelPaste">
+                    <i class="fas fa-paste me-1" aria-hidden="true"></i>
+                    <span>Paste Spreadsheet Cells</span>
+                </button>
+                <button type="button" id="tabLinkBtn" class="tab-btn" role="tab" aria-selected="false" aria-controls="panelLink">
+                    <i class="fas fa-link me-1" aria-hidden="true"></i>
+                    <span>Google Sheets Link</span>
+                </button>
+            </nav>
+
+            <!-- Tab Panel 1: Paste Spreadsheet Cells -->
+            <section id="panelPaste" class="tab-panel active" role="tabpanel" aria-labelledby="tabPasteBtn">
+                <div class="field-group">
+                    <label for="pasteSpreadsheetInput" class="field-label">
+                        <span class="label-heading">Paste Spreadsheet Data</span>
+                        <span class="label-instruction">Copy cells from Google Sheets or Excel (Ctrl+C) and paste below (Ctrl+V)</span>
+                    </label>
+                    <textarea
+                        id="pasteSpreadsheetInput"
+                        class="paste-textarea"
+                        rows="8"
+                        placeholder="Paste rows copied from Google Sheets or Excel here.&#10;Columns for School ID and Name will be detected automatically."
+                        spellcheck="false"
+                    ></textarea>
+                </div>
+
+                <fieldset class="import-mode-fieldset">
+                    <legend class="fieldset-legend">Database update mode:</legend>
+                    <div class="radio-options">
+                        <label class="radio-label">
+                            <input type="radio" name="importMode" value="replace" checked />
+                            <span class="radio-text">
+                                <strong>Replace all records</strong> (clears previous list and loads new survey evaluation batch)
+                            </span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="importMode" value="upsert" />
+                            <span class="radio-text">
+                                <strong>Merge and update</strong> (updates existing student names, appends new student IDs)
+                            </span>
+                        </label>
+                    </div>
+                </fieldset>
+
+                <div class="panel-actions">
+                    <button type="button" id="previewPasteBtn" class="action-btn preview-btn" title="Inspect detected rows and columns without saving">
+                        <i class="fas fa-eye me-1" aria-hidden="true"></i>
+                        <span>Preview Data</span>
+                    </button>
+                    <button type="button" id="submitPasteBtn" class="action-btn primary-save-btn" title="Commit parsed records to database">
+                        <i class="fas fa-database me-1" aria-hidden="true"></i>
+                        <span id="submitPasteBtnText">Update Database</span>
+                    </button>
+                    <button type="button" id="clearPasteBtn" class="action-btn text-clear-btn" title="Clear paste input">
+                        <span>Clear</span>
+                    </button>
+                </div>
+
+                <!-- Live Data Preview Area -->
+                <div id="pastePreviewArea" class="preview-card" style="display: none;">
+                    <div class="preview-header">
+                        <span class="preview-title" id="previewSummaryText">Detected Records</span>
+                        <button type="button" id="hidePreviewBtn" class="preview-dismiss-btn" aria-label="Dismiss preview">Dismiss</button>
+                    </div>
+                    <div class="preview-table-wrap">
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">#</th>
+                                    <th scope="col" id="previewThId">School ID</th>
+                                    <th scope="col" id="previewThName">Student Name</th>
+                                </tr>
+                            </thead>
+                            <tbody id="previewTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="pasteStatusNotice" class="status-notice-box" role="status" aria-live="polite" style="display: none;"></div>
+            </section>
+
+            <!-- Tab Panel 2: Google Sheets URL -->
+            <section id="panelLink" class="tab-panel" role="tabpanel" aria-labelledby="tabLinkBtn" hidden>
+                <div class="field-group">
+                    <label for="sheetUrlInput" class="field-label">
+                        <span class="label-heading">Google Spreadsheet URL</span>
+                        <span class="label-instruction">Paste public sheet link or web-published CSV URL</span>
+                    </label>
+                    <input
+                        type="url"
+                        id="sheetUrlInput"
+                        class="url-input"
+                        placeholder="https://docs.google.com/spreadsheets/d/..."
+                        autocomplete="off"
+                        spellcheck="false"
+                    />
+                    <p class="field-help-text">Standard Google Sheet URLs will be converted to CSV export links automatically.</p>
+                </div>
+
+                <div class="panel-actions">
+                    <button type="button" id="saveAndSyncBtn" class="action-btn primary-save-btn" title="Save URL and synchronize records immediately">
+                        <i class="fas fa-rotate me-1" aria-hidden="true"></i>
+                        <span id="saveAndSyncBtnText">Save & Sync Now</span>
+                    </button>
+                    <button type="button" id="saveLinkOnlyBtn" class="action-btn secondary-btn" title="Save URL without running immediate sync">
+                        <i class="fas fa-floppy-disk me-1" aria-hidden="true"></i>
+                        <span>Save Link Only</span>
+                    </button>
+                </div>
+
+                <div id="linkStatusNotice" class="status-notice-box" role="status" aria-live="polite" style="display: none;"></div>
+            </section>
+
+            <footer class="station-actions settings-footer">
+                <div class="footer-db-status">
+                    <i class="fas fa-server me-1" aria-hidden="true"></i>
+                    <span>Database Status: <strong id="modalStudentCount">-</strong> records loaded</span>
+                </div>
+                <div class="footer-nav-right">
+                    <a href="{{ url_for('viewer') }}" target="_blank" rel="noopener noreferrer" class="action-btn viewer-link-btn" title="Open student-facing display in a second monitor or window">
+                        <i class="fas fa-display me-1" aria-hidden="true"></i>
+                        <span>Open Guest Display</span>
+                    </a>
+                </div>
+            </footer>
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+
+</html>

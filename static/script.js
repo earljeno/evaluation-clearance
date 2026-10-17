@@ -346,3 +346,344 @@ startAutoRefresh();
 resetInactivityTimeout();
 updateClearButton();
 showIdleState();
+
+/* Settings Console & Spreadsheet Update Controller */
+
+const settingsModal = document.getElementById('settingsModal');
+const openSettingsBtn = document.getElementById('openSettingsBtn');
+const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+
+const tabPasteBtn = document.getElementById('tabPasteBtn');
+const tabLinkBtn = document.getElementById('tabLinkBtn');
+const panelPaste = document.getElementById('panelPaste');
+const panelLink = document.getElementById('panelLink');
+
+const pasteSpreadsheetInput = document.getElementById('pasteSpreadsheetInput');
+const previewPasteBtn = document.getElementById('previewPasteBtn');
+const submitPasteBtn = document.getElementById('submitPasteBtn');
+const submitPasteBtnText = document.getElementById('submitPasteBtnText');
+const clearPasteBtn = document.getElementById('clearPasteBtn');
+const pastePreviewArea = document.getElementById('pastePreviewArea');
+const previewSummaryText = document.getElementById('previewSummaryText');
+const previewTableBody = document.getElementById('previewTableBody');
+const hidePreviewBtn = document.getElementById('hidePreviewBtn');
+const pasteStatusNotice = document.getElementById('pasteStatusNotice');
+
+const sheetUrlInput = document.getElementById('sheetUrlInput');
+const saveAndSyncBtn = document.getElementById('saveAndSyncBtn');
+const saveAndSyncBtnText = document.getElementById('saveAndSyncBtnText');
+const saveLinkOnlyBtn = document.getElementById('saveLinkOnlyBtn');
+const linkStatusNotice = document.getElementById('linkStatusNotice');
+const modalStudentCount = document.getElementById('modalStudentCount');
+
+function showNotice(element, type, message) {
+    if (!element) return;
+    element.className = `status-notice-box status-${type}`;
+    element.style.display = 'flex';
+
+    let iconClass = 'fa-circle-info';
+    if (type === 'success') iconClass = 'fa-circle-check';
+    else if (type === 'error') iconClass = 'fa-circle-xmark';
+    else if (type === 'warning') iconClass = 'fa-triangle-exclamation';
+    else if (type === 'loading') iconClass = 'fa-circle-notch fa-spin';
+
+    element.innerHTML = `<i class="fas ${iconClass}" aria-hidden="true"></i> <span>${escapeHtml(message)}</span>`;
+}
+
+function clearNotice(element) {
+    if (!element) return;
+    element.style.display = 'none';
+    element.innerHTML = '';
+}
+
+function loadSettingsData() {
+    fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'Success' && data.data) {
+                if (sheetUrlInput && !sheetUrlInput.value) {
+                    sheetUrlInput.value = data.data.spreadsheet_link || '';
+                }
+                if (modalStudentCount) {
+                    modalStudentCount.textContent = data.data.student_count;
+                }
+            }
+        })
+        .catch(err => {
+            console.error('Failed to load settings:', err);
+        });
+}
+
+function switchSettingsTab(target) {
+    if (target === 'paste') {
+        if (tabPasteBtn) {
+            tabPasteBtn.classList.add('active');
+            tabPasteBtn.setAttribute('aria-selected', 'true');
+        }
+        if (tabLinkBtn) {
+            tabLinkBtn.classList.remove('active');
+            tabLinkBtn.setAttribute('aria-selected', 'false');
+        }
+        if (panelPaste) {
+            panelPaste.classList.add('active');
+            panelPaste.hidden = false;
+        }
+        if (panelLink) {
+            panelLink.classList.remove('active');
+            panelLink.hidden = true;
+        }
+    } else {
+        if (tabLinkBtn) {
+            tabLinkBtn.classList.add('active');
+            tabLinkBtn.setAttribute('aria-selected', 'true');
+        }
+        if (tabPasteBtn) {
+            tabPasteBtn.classList.remove('active');
+            tabPasteBtn.setAttribute('aria-selected', 'false');
+        }
+        if (panelLink) {
+            panelLink.classList.add('active');
+            panelLink.hidden = false;
+        }
+        if (panelPaste) {
+            panelPaste.classList.remove('active');
+            panelPaste.hidden = true;
+        }
+    }
+}
+
+if (tabPasteBtn) {
+    tabPasteBtn.addEventListener('click', () => switchSettingsTab('paste'));
+}
+if (tabLinkBtn) {
+    tabLinkBtn.addEventListener('click', () => switchSettingsTab('link'));
+}
+
+if (openSettingsBtn && settingsModal) {
+    openSettingsBtn.addEventListener('click', () => {
+        settingsModal.hidden = false;
+        openSettingsBtn.setAttribute('aria-expanded', 'true');
+        loadSettingsData();
+        clearNotice(pasteStatusNotice);
+        clearNotice(linkStatusNotice);
+        if (tabPasteBtn) tabPasteBtn.focus();
+    });
+}
+
+if (closeSettingsBtn && settingsModal) {
+    closeSettingsBtn.addEventListener('click', () => {
+        settingsModal.hidden = true;
+        if (openSettingsBtn) {
+            openSettingsBtn.setAttribute('aria-expanded', 'false');
+            openSettingsBtn.focus();
+        }
+    });
+}
+
+// Close modal when clicking backdrop
+if (settingsModal) {
+    settingsModal.addEventListener('click', (e) => {
+        if (e.target === settingsModal) {
+            settingsModal.hidden = true;
+            if (openSettingsBtn) {
+                openSettingsBtn.setAttribute('aria-expanded', 'false');
+                openSettingsBtn.focus();
+            }
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !settingsModal.hidden) {
+            settingsModal.hidden = true;
+            if (openSettingsBtn) {
+                openSettingsBtn.setAttribute('aria-expanded', 'false');
+                openSettingsBtn.focus();
+            }
+        }
+    });
+}
+
+// Preview pasted spreadsheet data
+if (previewPasteBtn && pasteSpreadsheetInput) {
+    previewPasteBtn.addEventListener('click', () => {
+        const rawText = pasteSpreadsheetInput.value.trim();
+        if (!rawText) {
+            showNotice(pasteStatusNotice, 'warning', 'Please paste data rows from a spreadsheet first.');
+            return;
+        }
+
+        showNotice(pasteStatusNotice, 'loading', 'Analyzing spreadsheet data structure...');
+        if (pastePreviewArea) pastePreviewArea.style.display = 'none';
+
+        fetch('/api/settings/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ raw_data: rawText })
+        })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok || data.status === 'Error') {
+                    showNotice(pasteStatusNotice, 'error', data.message || 'Unable to parse pasted content.');
+                    return;
+                }
+
+                showNotice(pasteStatusNotice, 'success', `Parsed ${data.count} student records successfully. Click "Update Database" to save.`);
+
+                if (previewSummaryText) {
+                    previewSummaryText.textContent = `Found ${data.count} records (ID: ${data.id_column}, Name: ${data.name_column})`;
+                }
+
+                if (previewTableBody) {
+                    previewTableBody.innerHTML = '';
+                    (data.preview || []).forEach((row, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${idx + 1}</td>
+                            <td>${escapeHtml(row.school_id)}</td>
+                            <td>${escapeHtml(row.name)}</td>
+                        `;
+                        previewTableBody.appendChild(tr);
+                    });
+                }
+
+                if (pastePreviewArea) {
+                    pastePreviewArea.style.display = 'flex';
+                }
+            })
+            .catch(err => {
+                showNotice(pasteStatusNotice, 'error', `Failed to connect to parser: ${err.message}`);
+            });
+    });
+}
+
+if (hidePreviewBtn && pastePreviewArea) {
+    hidePreviewBtn.addEventListener('click', () => {
+        pastePreviewArea.style.display = 'none';
+    });
+}
+
+if (clearPasteBtn && pasteSpreadsheetInput) {
+    clearPasteBtn.addEventListener('click', () => {
+        pasteSpreadsheetInput.value = '';
+        if (pastePreviewArea) pastePreviewArea.style.display = 'none';
+        clearNotice(pasteStatusNotice);
+        pasteSpreadsheetInput.focus();
+    });
+}
+
+// Submit pasted spreadsheet data to database
+if (submitPasteBtn && pasteSpreadsheetInput) {
+    submitPasteBtn.addEventListener('click', () => {
+        const rawText = pasteSpreadsheetInput.value.trim();
+        if (!rawText) {
+            showNotice(pasteStatusNotice, 'warning', 'Please paste spreadsheet rows before updating.');
+            return;
+        }
+
+        const selectedModeEl = document.querySelector('input[name="importMode"]:checked');
+        const mode = selectedModeEl ? selectedModeEl.value : 'replace';
+
+        const originalText = submitPasteBtnText ? submitPasteBtnText.textContent : 'Update Database';
+        submitPasteBtn.disabled = true;
+        if (submitPasteBtnText) submitPasteBtnText.textContent = 'Updating Database...';
+        showNotice(pasteStatusNotice, 'loading', 'Saving records to database...');
+
+        fetch('/api/settings/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ raw_data: rawText, mode })
+        })
+            .then(res => res.json().then(data => ({ ok: res.ok, data })))
+            .then(({ ok, data }) => {
+                if (!ok || data.status === 'Error') {
+                    showNotice(pasteStatusNotice, 'error', data.message || 'Database update failed.');
+                    return;
+                }
+
+                showNotice(pasteStatusNotice, 'success', data.message || `Updated database with ${data.count} records.`);
+                if (modalStudentCount && data.total_students !== undefined) {
+                    modalStudentCount.textContent = data.total_students;
+                }
+
+                // If staff member is currently searching, re-run query with new records
+                if (searchInput && searchInput.value.trim()) {
+                    performSearch(searchInput.value);
+                }
+            })
+            .catch(err => {
+                showNotice(pasteStatusNotice, 'error', `Network error during import: ${err.message}`);
+            })
+            .finally(() => {
+                submitPasteBtn.disabled = false;
+                if (submitPasteBtnText) submitPasteBtnText.textContent = originalText;
+            });
+    });
+}
+
+// Google Sheet URL update handlers
+function submitUrlUpdate(syncNow) {
+    if (!sheetUrlInput) return;
+    const url = sheetUrlInput.value.trim();
+    if (!url) {
+        showNotice(linkStatusNotice, 'warning', 'Please enter a valid Google Spreadsheet URL.');
+        return;
+    }
+
+    const btn = syncNow ? saveAndSyncBtn : saveLinkOnlyBtn;
+    const btnText = syncNow ? saveAndSyncBtnText : null;
+    const originalText = btnText ? btnText.textContent : '';
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Syncing...';
+    showNotice(linkStatusNotice, 'loading', syncNow ? 'Saving URL and downloading spreadsheet records...' : 'Saving URL...');
+
+    fetch('/api/settings/link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spreadsheet_link: url, sync_now: syncNow })
+    })
+        .then(res => res.json().then(data => ({ ok: res.ok, data })))
+        .then(({ ok, data }) => {
+            if (!ok || data.status === 'Error') {
+                showNotice(linkStatusNotice, 'error', data.message || 'Failed to update spreadsheet link.');
+                return;
+            }
+
+            if (data.status === 'Warning') {
+                showNotice(linkStatusNotice, 'warning', data.message);
+                return;
+            }
+
+            showNotice(linkStatusNotice, 'success', data.message || 'Spreadsheet URL saved and synchronized.');
+            if (sheetUrlInput && data.spreadsheet_link) {
+                sheetUrlInput.value = data.spreadsheet_link;
+            }
+            if (modalStudentCount && data.student_count !== undefined) {
+                modalStudentCount.textContent = data.student_count;
+            }
+
+            if (searchInput && searchInput.value.trim()) {
+                performSearch(searchInput.value);
+            }
+        })
+        .catch(err => {
+            showNotice(linkStatusNotice, 'error', `Network error while updating link: ${err.message}`);
+        })
+        .finally(() => {
+            if (btn) btn.disabled = false;
+            if (btnText) btnText.textContent = originalText;
+        });
+}
+
+if (saveAndSyncBtn) {
+    saveAndSyncBtn.addEventListener('click', () => submitUrlUpdate(true));
+}
+
+if (saveLinkOnlyBtn) {
+    saveLinkOnlyBtn.addEventListener('click', () => submitUrlUpdate(false));
+}
+
+// Initialize settings on standalone settings page if present
+if (document.querySelector('.settings-station-card')) {
+    loadSettingsData();
+}
